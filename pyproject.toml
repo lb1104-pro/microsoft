@@ -1,0 +1,135 @@
+[build-system]
+requires = ["uv_build>=0.9.10,<0.13"]
+build-backend = "uv_build"
+
+[project]
+name = "typeagent"
+version = "0.5.0.dev"
+description = "Incremental message indexing and querying pipelines using Structured RAG"
+readme = { file = "README.md", content-type = "text/markdown" }
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Guido van Rossum", email = "gvanrossum@microsoft.com" },
+  { name = "Steven Lucco" },
+  { name = "Umesh Madan" },
+]
+requires-python = ">=3.13"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Typing :: Typed",
+]
+
+# These bounds ship in the wheel metadata, so they constrain every project that
+# depends on typeagent. Keep the lower bounds as low as they still work: when
+# two packages demand different minimums of a shared dependency, the result is
+# an unsolvable resolution for the user in the middle. So don't raise a floor
+# just because a newer release exists -- only when our code actually requires
+# it, and add an upper bound only for a known incompatibility (see mcp below).
+# Routine "update the dependencies" work belongs in uv.lock and the dev group.
+dependencies = [
+  "azure-identity>=1.22.0",
+  "colorama>=0.4.6",
+  # mcp 2.0 dropped mcp.server.fastmcp; src/typeagent/mcp/server.py needs
+  # porting to the new MCPServer API before the cap can be lifted.
+  "mcp[cli]>=1.12.1,<2",
+  "numpy>=2.5.2; python_version >= '3.15'",
+  "numpy>=2.2.6; python_version < '3.15'",
+  "openai>=1.81.0",
+  "pydantic>=2.14.0; python_version >= '3.15'",
+  "pydantic>=2.10.0; python_version < '3.15'",
+  "pydantic-ai-slim[openai]>=2.48.0",
+  "pyreadline3>=3.5.4 ; sys_platform == 'win32'",
+  "python-dotenv>=1.1.0",
+  "stamina>=26.1.0",
+  "tiktoken>=0.14.0; python_version >= '3.15'",
+  "tiktoken>=0.13.0; python_version < '3.15'",
+  "typechat>=0.0.4",
+  "webvtt-py>=0.5.1",
+]
+
+# Also published in the wheel metadata -- same low-floor rule as above.
+[project.optional-dependencies]
+# Needed to enable --logfire flag to tools/query.py
+logfire = [
+  "logfire>=4.1.0",
+  "opentelemetry-instrumentation-httpx>=0.57b0",
+]
+
+[project.urls]
+GitHub = "https://github.com/microsoft/typeagent-py"
+Documentation = "https://github.com/microsoft/typeagent-py/tree/main/docs/README.md"
+
+[tool.uv]
+constraint-dependencies = [
+    "python-multipart>=0.0.32",
+]
+
+[tool.uv.build-backend]
+module-root = "src"
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.pyright]
+extraPaths = ["src", "tools"]
+reportUnusedVariable = true
+reportUnusedImport = true
+reportDuplicateImport = true
+
+[tool.isort]
+profile = "black"
+order_by_type = false
+force_sort_within_sections = true
+
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "AI", "FIRSTPARTY", "LOCALFOLDER"]
+known_ai = ["mcp", "openai", "pydantic", "pydantic_ai", "tiktoken", "typechat"]
+known_first_party = ["typeagent", "tests", "tools", "gmail", "demo"]
+known_local_folder = ["conftest"]
+
+# isort/black/pyright already cover ordering, formatting and unused/duplicate
+# imports (see above). Ruff is scoped narrowly to the one gap those don't
+# fill: deterministically banning wildcard imports, per AGENTS.md's "Python
+# Import Style Guidelines". Broader adoption of ruff as an isort/black
+# replacement was considered and deferred in #116.
+[tool.ruff.lint]
+select = ["F403", "F405"]
+
+[tool.ruff.lint.per-file-ignores]
+# Explicit re-export aggregator (see AGENTS.md's "Import Architecture Rules"
+# and "Prohibit Wildcard Imports" exceptions).
+"src/typeagent/knowpro/interfaces.py" = ["F403", "F405"]
+
+[dependency-groups]
+
+# Dev tooling never reaches the wheel metadata -- these bounds only pick which
+# versions the tools run with here and in CI, so keeping them current is fine
+# (and keeps everyone on the same formatter, type checker and test runner).
+dev = [
+  "azure-mgmt-authorization>=4.0.0",
+  "azure-mgmt-keyvault>=14.0.1",
+  "black>=26.5.1",
+  "coverage[toml]>=7.15.4",
+  "google-api-python-client>=2.198.0",
+  "google-auth-httplib2>=0.4.1",
+  "google-auth-oauthlib>=1.4.0",
+  "isort>=8.0.1",
+  "logfire>=4.40.0",  # So 'make check' passes
+  "msgraph-sdk>=1.61.0",
+  "opentelemetry-instrumentation-httpx>=0.65b0",
+  "pyright>=1.1.414",
+  "pytest>=9.1.1",
+  "pytest-asyncio>=1.4.0",
+  "pytest-mock>=3.15.1",
+  "ruff>=0.16.4",
+]
